@@ -1,4 +1,3 @@
-import bcrypt
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token
 
@@ -16,7 +15,7 @@ def register():
     username = data.get('username')
     password = data.get('password')
 
-    if User.query.filter_by(username=username).first():
+    if User.is_exist(username=username):
         return jsonify({"error": "Username already exists"}), 400
 
     new_user = User(username=username, password=password)

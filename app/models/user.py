@@ -23,5 +23,9 @@ class User(db.Model, UserMixin):
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password)
 
+    @classmethod
+    def is_exist(cls, username: str) -> bool:
+        return True if cls.query.filter_by(username=username).first() else False
+
     def __repr__(self):
         return self.username

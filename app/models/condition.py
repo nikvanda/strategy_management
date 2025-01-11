@@ -11,5 +11,6 @@ class Condition(db.Model):
     indicator = db.Column(db.String(100), nullable=False)
     threshold = db.Column(db.Numeric(10, 2), nullable=False)
     type = db.Column(Enum('buy', 'sell', name='action_type_enum'), nullable=False)
+    strategy_id = db.Column(db.Integer, db.ForeignKey('strategy.id'))
 
     strategy = relationship('Strategy', backref='conditions')
