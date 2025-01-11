@@ -4,7 +4,6 @@ from flask_jwt_extended import create_access_token
 
 from app.auth import bp
 from app.models import User
-from app.extensions import db
 
 
 @bp.route('/register/', methods=['POST'])
@@ -20,11 +19,8 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
 
-    pw_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    new_user = User(username=username, password=pw_hash)
-
-    db.session.add(new_user)
-    db.session.commit()
+    new_user = User(username=username, password=password)
+    new_user.save()
 
     return jsonify({"id": new_user.id, "username": new_user.username}), 201
 
@@ -37,7 +33,7 @@ def login():
 
     user = User.query.filter_by(username=username).first()
 
-    if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
+    if user.check_password(password):
         access_token = create_access_token(identity=user.id)
         return jsonify({'message': 'Login Success', 'access_token': access_token})
     else:
