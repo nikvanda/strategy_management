@@ -9,3 +9,5 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(80), nullable=False)
     is_active = db.Column(db.Boolean(), default=True)
 
+    def __repr__(self):
+        return self.username
