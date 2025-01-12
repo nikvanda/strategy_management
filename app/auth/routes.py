@@ -8,14 +8,13 @@ from app.models import User
 @bp.route('/register/', methods=['POST'])
 def register():
     data = request.get_json()
-
-    if not data or not data.get('username') or not data.get('password'):
-        return jsonify({"error": "Username and password are required"}), 400
-
     username = data.get('username')
     password = data.get('password')
 
-    if User.is_exist(username=username):
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+
+    if User.get_by_username(username=username):
         return jsonify({"error": "Username already exists"}), 400
 
     new_user = User(username=username, password=password)
@@ -30,7 +29,9 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    user = User.query.filter_by(username=username).first()
+    user = User.get_by_username(username=username)
+    if not user:
+        return jsonify({"error": "No such a user"}), 400
 
     if user.check_password(password):
         access_token = create_access_token(identity=user.id)

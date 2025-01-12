@@ -16,7 +16,12 @@ def create_app(config_class=Config):
         db.create_all()
         db.session.commit()
 
-    from app.auth import bp as main_bp
-    app.register_blueprint(main_bp)
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp)
+
+    from app.strategy import bp as strategy_bp, strategy_detail_view, strategy_list_view
+    app.register_blueprint(strategy_bp)
+    app.add_url_rule(f'{strategy_bp.url_prefix}/<int:pk>', view_func=strategy_detail_view)
+    app.add_url_rule(strategy_bp.url_prefix, view_func=strategy_list_view)
 
     return app
