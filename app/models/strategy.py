@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app import db
 from .condition import Condition
+from ..controllers import save
 
 
 class Strategy(db.Model):
@@ -21,13 +22,9 @@ class Strategy(db.Model):
         super().__init__(**{'user_id': user_id, 'name': name, 'description': description,
                             'asset_type': asset_type, 'status': status})
 
-    def save(self):
-        db.session.add(self)
-        db.session.commit()
-
     def add_conditions(self, conditions: dict[str, list[dict[str, str, int]] | None]):
         for cond_type, cond_data in conditions.items():
             if cond_data is not None:
                 for cond in cond_data:
                     condition = Condition(strategy_id=self.id, type=cond_type, **cond)
-                    condition.save()
+                    save(condition)

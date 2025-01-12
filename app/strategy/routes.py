@@ -2,7 +2,8 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app import Strategy, db
+from ..controllers import save, get_by_pk
+from app import Strategy, db, User
 
 
 class StrategyListView(MethodView):
@@ -12,7 +13,8 @@ class StrategyListView(MethodView):
     model = Strategy
 
     def get(self):
-        pass
+        user_id = get_jwt_identity()
+        user = get_by_pk(user_id, User)
 
     def post(self):
         user_id = get_jwt_identity()
@@ -29,7 +31,7 @@ class StrategyListView(MethodView):
             buy_conditions = None
 
         strategy = self.model(user_id=user_id, **data)
-        strategy.save()
+        save(strategy)
         strategy.add_conditions({'sell': sell_conditions, 'buy': buy_conditions})
 
         if strategy.id:

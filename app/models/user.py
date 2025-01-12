@@ -19,17 +19,8 @@ class User(db.Model, UserMixin):
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password)
 
-    def save(self):
-        db.session.add(self)
-        db.session.commit()
-
-    @classmethod
-    def get_by_username(cls, username: str):
-        return cls.query.filter_by(username=username).first()
-
-    @classmethod
-    def get_by_id(cls, pk: int):
-        return cls.query.filter_by(id=pk).first()
+    def get_related_strategies(self):
+        pass
 
     def __repr__(self):
         return self.username

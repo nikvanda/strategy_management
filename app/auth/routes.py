@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token
 
+from ..controllers import save, get_by_username
 from app.auth import bp
 from app.models import User
 
@@ -14,11 +15,11 @@ def register():
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
 
-    if User.get_by_username(username=username):
+    if get_by_username(username=username):
         return jsonify({"error": "Username already exists"}), 400
 
     new_user = User(username=username, password=password)
-    new_user.save()
+    save(new_user)
 
     return jsonify({"id": new_user.id, "username": new_user.username}), 201
 
@@ -29,7 +30,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    user = User.get_by_username(username=username)
+    user = get_by_username(username=username)
     if not user:
         return jsonify({"error": "No such a user"}), 400
 

@@ -14,7 +14,3 @@ class Condition(db.Model):
     strategy_id = db.Column(db.Integer, db.ForeignKey('strategy.id'), nullable=False)
 
     strategy = relationship('Strategy', backref='conditions')
-
-    def save(self):
-        db.session.add(self)
-        db.session.commit()
