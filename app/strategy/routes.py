@@ -2,7 +2,7 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..controllers import save, get_user_strategies, get_user_strategy, get_strategy_related, delete
+from ..controllers import save, get_user_strategies, get_user_strategy, get_strategy_related, delete, update_strategy
 from app import Strategy, Condition
 
 
@@ -15,7 +15,8 @@ class StrategyListView(MethodView):
     def get(self):
         user_id = get_jwt_identity()
         related_strategies = get_user_strategies(user_id)
-        response = {'user_strategies': [{'name': st.name,
+        response = {'user_strategies': [{'id': st.id,
+                                         'name': st.name,
                                          'description': st.description,
                                          'asset_type': st.asset_type,
                                          'status': st.status}
@@ -52,27 +53,21 @@ class StrategyDetailView(StrategyListView):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
 
-        response = {'name': st.name,
-                    'description': st.description,
-                    'asset_type': st.asset_type,
-                    'status': st.status,
-                    'buy_conditions': [],
-                    'sell_conditions': []}
-
-        conditions = get_strategy_related(pk, Condition)
-        for condition in conditions:
-            obj = {'indicator': condition.indicator, 'threshold': condition.threshold}
-            match condition.type:
-                case 'buy':
-                    response['buy_conditions'].append(obj)
-                case 'sell':
-                    response['sell_conditions'].append(obj)
+        response = st.to_dict()
         return jsonify(response), 200
 
     def patch(self, pk):
-        pass
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        st = get_user_strategy(user_id, pk)
 
-    def delete(self, pk): #ToDO: check related objects deletion
+        update_strategy(st, data)
+        save(st)
+
+        response = st.to_dict()
+        return jsonify(response), 200
+
+    def delete(self, pk):  # ToDO: check related objects deletion
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
         delete(st)

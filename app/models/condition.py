@@ -1,5 +1,5 @@
 from sqlalchemy import Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from app import db
 
@@ -13,4 +13,4 @@ class Condition(db.Model):
     type = db.Column(Enum('buy', 'sell', name='action_type_enum'), nullable=False)
     strategy_id = db.Column(db.Integer, db.ForeignKey('strategy.id'), nullable=False)
 
-    strategy = relationship('Strategy', backref='conditions', cascade="all,delete")
+    strategy = relationship('Strategy', backref=backref('conditions', cascade="all, delete-orphan"))

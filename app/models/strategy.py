@@ -1,5 +1,5 @@
 from sqlalchemy import Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from app import db
 from .condition import Condition
@@ -15,7 +15,7 @@ class Strategy(db.Model):
     status = db.Column(Enum('active', 'closed', 'paused', name='status_type_enum'), default='active')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    user = relationship('User', backref='strategies')
+    user = relationship('User', backref=backref('strategies', cascade="all, delete-orphan"))
 
     def __init__(self, user_id: int, name: str, description: str, asset_type: str, status: str):
         super().__init__(**{'user_id': user_id, 'name': name, 'description': description,
@@ -31,3 +31,21 @@ class Strategy(db.Model):
                     condition = Condition(strategy_id=self.id, type=cond_type, **cond)
                     db.session.add(condition)
                     db.session.commit()
+
+    def to_dict(self):
+        response = {'name': self.name,
+                    'description': self.description,
+                    'asset_type': self.asset_type,
+                    'status': self.status,
+                    'buy_conditions': [],
+                    'sell_conditions': []}
+
+        conditions = Condition.query.filter_by(strategy_id=self.id).all()
+        for condition in conditions:
+            obj = {'indicator': condition.indicator, 'threshold': condition.threshold}
+            match condition.type:
+                case 'buy':
+                    response['buy_conditions'].append(obj)
+                case 'sell':
+                    response['sell_conditions'].append(obj)
+        return response
