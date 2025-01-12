@@ -2,8 +2,8 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..controllers import save, get_by_pk, get_user_strategies
-from app import Strategy, db
+from ..controllers import save, get_by_pk, get_user_strategies, get_user_strategy, get_strategy_related
+from app import Strategy, Condition
 
 
 class StrategyListView(MethodView):
@@ -42,24 +42,35 @@ class StrategyListView(MethodView):
 
         if strategy.id:
             return jsonify({'name': strategy.name, 'asset_type': strategy.asset_type}), 201
-        return jsonify({'error': 'Strategy creation failed'})
+        return jsonify({'error': 'Strategy creation failed'}), 400
 
 
 class StrategyDetailView(StrategyListView):
     methods = ['GET', 'PATCH', 'DELETE']
 
-    def _get_item(self, id):
-        return self.model.query.get_or_404(id)
+    def get(self, pk):
+        user_id = get_jwt_identity()
+        st = get_user_strategy(user_id, pk)
 
-    def get(self, id):
-        item = self._get_item(id)
-        return jsonify(item.to_json())
+        response = {'name': st.name,
+                    'description': st.description,
+                    'asset_type': st.asset_type,
+                    'status': st.status,
+                    'buy_conditions': [],
+                    'sell_conditions': []}
 
-    def patch(self, id):
+        conditions = get_strategy_related(pk, Condition)
+        for condition in conditions:
+            obj = {'indicator': condition.indicator, 'threshold': condition.threshold}
+            match condition.type:
+                case 'buy':
+                    response['buy_conditions'].append(obj)
+                case 'sell':
+                    response['sell_conditions'].append(obj)
+        return response
+
+    def patch(self, pk):
         pass
 
-    def delete(self, id):
-        item = self._get_item(id)
-        db.session.delete(item)
-        db.session.commit()
-        return "", 204
+    def delete(self, pk):
+        pass
