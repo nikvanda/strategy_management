@@ -2,8 +2,8 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..controllers import save, get_by_pk
-from app import Strategy, db, User
+from ..controllers import save, get_by_pk, get_user_strategies
+from app import Strategy, db
 
 
 class StrategyListView(MethodView):
@@ -14,7 +14,13 @@ class StrategyListView(MethodView):
 
     def get(self):
         user_id = get_jwt_identity()
-        user = get_by_pk(user_id, User)
+        related_strategies = get_user_strategies(user_id)
+        response = {'user_strategies': [{'name': st.name,
+                                         'description': st.description,
+                                         'asset_type': st.asset_type,
+                                         'status': st.status}
+                                        for st in related_strategies]}
+        return jsonify(response), 200
 
     def post(self):
         user_id = get_jwt_identity()
