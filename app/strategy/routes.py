@@ -2,7 +2,7 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..controllers import save, get_by_pk, get_user_strategies, get_user_strategy, get_strategy_related
+from ..controllers import save, get_user_strategies, get_user_strategy, get_strategy_related, delete
 from app import Strategy, Condition
 
 
@@ -67,10 +67,13 @@ class StrategyDetailView(StrategyListView):
                     response['buy_conditions'].append(obj)
                 case 'sell':
                     response['sell_conditions'].append(obj)
-        return response
+        return jsonify(response), 200
 
     def patch(self, pk):
         pass
 
-    def delete(self, pk):
-        pass
+    def delete(self, pk): #ToDO: check related objects deletion
+        user_id = get_jwt_identity()
+        st = get_user_strategy(user_id, pk)
+        delete(st)
+        return jsonify({'message': 'Successfully delete an object'}), 204
