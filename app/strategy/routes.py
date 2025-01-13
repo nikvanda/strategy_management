@@ -1,9 +1,12 @@
+import pandas as pd
 from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app import utils
 from ..controllers import save, get_user_strategies, get_user_strategy, get_strategy_related, delete, update_strategy
-from app import Strategy, Condition
+from app import Strategy
+from app.strategy import bp
 
 
 class StrategyListView(MethodView):
@@ -67,8 +70,23 @@ class StrategyDetailView(StrategyListView):
         response = st.to_dict()
         return jsonify(response), 200
 
-    def delete(self, pk):  # ToDO: check related objects deletion
+    def delete(self, pk):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
         delete(st)
         return jsonify({'message': 'Successfully delete an object'}), 204
+
+
+@bp.route('<int:pk>/simulate/', methods=['POST'])
+@jwt_required()
+def simulate(pk: int):
+    data = request.get_json()
+    user_id = get_jwt_identity()
+    st = get_user_strategy(user_id, pk)
+
+    df = pd.DataFrame(data)
+    df['date'] = pd.to_datetime(df['date'])
+    df['momentum'] = df['close'] - df['close'].shift(1)
+    result = utils.simulate_strategy(df, st)
+
+    return jsonify(result), 200
