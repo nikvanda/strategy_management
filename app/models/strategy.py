@@ -1,7 +1,7 @@
 from sqlalchemy import Enum
 from sqlalchemy.orm import relationship, backref
 
-from app import db
+from app import db, utils
 from .condition import Condition
 
 
@@ -26,7 +26,7 @@ class Strategy(db.Model):
 
     def add_conditions(self, conditions: dict[str, list[dict[str, str, int]] | None]):
         for cond_type, cond_data in conditions.items():
-            if cond_data is not None:
+            if cond_data:
                 for cond in cond_data:
                     condition = Condition(strategy_id=self.id, type=cond_type, **cond)
                     db.session.add(condition)
@@ -43,9 +43,5 @@ class Strategy(db.Model):
         conditions = Condition.query.filter_by(strategy_id=self.id).all()
         for condition in conditions:
             obj = {'indicator': condition.indicator, 'threshold': condition.threshold}
-            match condition.type:
-                case 'buy':
-                    response['buy_conditions'].append(obj)
-                case 'sell':
-                    response['sell_conditions'].append(obj)
+            response[condition.type].append(obj)
         return response

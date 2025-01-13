@@ -10,7 +10,7 @@ class Condition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     indicator = db.Column(db.String(100), nullable=False)
     threshold = db.Column(db.Numeric(6, 2), nullable=False)
-    type = db.Column(Enum('buy', 'sell', name='action_type_enum'), nullable=False)
+    type = db.Column(Enum('buy_conditions', 'sell_conditions', name='action_type_enum'), nullable=False)
     strategy_id = db.Column(db.Integer, db.ForeignKey('strategy.id'), nullable=False)
 
     strategy = relationship('Strategy', backref=backref('conditions', cascade="all, delete-orphan"))
