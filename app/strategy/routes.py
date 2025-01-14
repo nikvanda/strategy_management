@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app import utils
-from ..controllers import save, get_user_strategies, get_user_strategy, get_strategy_related, delete, update_strategy
+from ..controllers import save, get_user_strategies, get_user_strategy, delete, update_strategy
 from app import Strategy
 from app.strategy import bp
 
@@ -42,7 +42,7 @@ class StrategyListView(MethodView):
 
         strategy = self.model(user_id=user_id, **data)
         save(strategy)
-        strategy.add_conditions({'sell': sell_conditions, 'buy': buy_conditions})
+        update_strategy(strategy, {'sell_conditions': sell_conditions, 'buy_conditions': buy_conditions})
 
         if strategy.id:
             return jsonify({'name': strategy.name, 'asset_type': strategy.asset_type}), 201
