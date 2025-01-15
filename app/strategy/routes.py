@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import utils, cache, Strategy, User
 from ..controllers import save, get_user_strategies, get_user_strategy, delete, update_strategy, get_by_pk
 from app.strategy import bp
-from ..extensions import redis_client, channel
+from ..extensions import channel
 
 
 class StrategyListView(MethodView):
@@ -15,7 +15,7 @@ class StrategyListView(MethodView):
     methods = ['GET', 'POST']
     model = Strategy
 
-    @cache.cached(timeout=60, key_prefix='strategies')
+    @cache.cached(timeout=60 ** 2, key_prefix='strategies')
     def get(self):
         user_id = get_jwt_identity()
         related_strategies = get_user_strategies(user_id)
@@ -46,10 +46,11 @@ class StrategyListView(MethodView):
         update_strategy(strategy, {'sell_conditions': sell_conditions, 'buy_conditions': buy_conditions})
 
         if strategy.id:
+            cache.delete('strategies')
             user = get_by_pk(user_id, User)
             channel.basic_publish(exchange='',
                                   routing_key='strategy_changed',
-                                  body=f'User {user.username} updated created {strategy.name}.')
+                                  body=f'User {user.username} created {strategy.name}.')
             return jsonify({'name': strategy.name, 'asset_type': strategy.asset_type}), 201
         return jsonify({'error': 'Strategy creation failed'}), 400
 
@@ -57,10 +58,7 @@ class StrategyListView(MethodView):
 class StrategyDetailView(StrategyListView):
     methods = ['GET', 'PATCH', 'DELETE']
 
-    @cache.cached(timeout=60 * 3, key_prefix='strategies')
     def get(self, pk):
-        cached_response = redis_client.get('strategies')
-        print(cached_response)
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
 
@@ -77,6 +75,7 @@ class StrategyDetailView(StrategyListView):
 
         response = st.to_dict()
         user = get_by_pk(user_id, User)
+        cache.delete('strategies')
         channel.basic_publish(exchange='',
                               routing_key='strategy_changed',
                               body=f'User {user.username} updated strategy {st.name}.')
@@ -86,6 +85,7 @@ class StrategyDetailView(StrategyListView):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
         delete(st)
+        cache.delete('strategies')
         return jsonify({'message': 'Successfully delete an object'}), 204
 
 
