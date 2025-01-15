@@ -1,7 +1,7 @@
 from sqlalchemy import Enum
 from sqlalchemy.orm import relationship, backref
 
-from app import db, utils
+from app import db
 from .condition import Condition
 
 

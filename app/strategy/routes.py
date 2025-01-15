@@ -1,4 +1,5 @@
 import pandas as pd
+import sqlalchemy
 from flask import jsonify, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -41,9 +42,12 @@ class StrategyListView(MethodView):
         except KeyError:
             buy_conditions = None
 
-        strategy = self.model(user_id=user_id, **data)
-        save(strategy)
-        update_strategy(strategy, {'sell_conditions': sell_conditions, 'buy_conditions': buy_conditions})
+        try:
+            strategy = self.model(user_id=user_id, **data)
+            save(strategy)
+            update_strategy(strategy, {'sell_conditions': sell_conditions, 'buy_conditions': buy_conditions})
+        except sqlalchemy.exc.DataError:
+            return jsonify({'error': 'Invalid data'}), 400
 
         if strategy.id:
             cache.delete('strategies')
@@ -61,16 +65,23 @@ class StrategyDetailView(StrategyListView):
     def get(self, pk):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
+        if st is None:
+            return jsonify({'error': 'No such a strategy'}), 400
 
         response = st.to_dict()
         return jsonify(response), 200
 
     def patch(self, pk):
         user_id = get_jwt_identity()
-        data = request.get_json()
         st = get_user_strategy(user_id, pk)
+        if st is None:
+            return jsonify({'error': 'No such a strategy'}), 400
 
-        update_strategy(st, data)
+        data = request.get_json()
+        try:
+            update_strategy(st, data)
+        except sqlalchemy.exc.DataError:
+            return jsonify({'error': 'Invalid data'}), 400
         save(st)
 
         response = st.to_dict()
@@ -84,6 +95,9 @@ class StrategyDetailView(StrategyListView):
     def delete(self, pk):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
+        if st is None:
+            return jsonify({'error': 'No such a strategy'}), 400
+
         delete(st)
         cache.delete('strategies')
         return jsonify({'message': 'Successfully delete an object'}), 204
@@ -92,10 +106,12 @@ class StrategyDetailView(StrategyListView):
 @bp.route('<int:pk>/simulate/', methods=['POST'])
 @jwt_required()
 def simulate(pk: int):
-    data = request.get_json()
     user_id = get_jwt_identity()
     st = get_user_strategy(user_id, pk)
+    if st is None:
+        return jsonify({'error': 'No such a strategy'}), 400
 
+    data = request.get_json()
     df = pd.DataFrame(data)
     df['date'] = pd.to_datetime(df['date'])
     df['momentum'] = df['close'] - df['close'].shift(1)
