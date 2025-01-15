@@ -12,6 +12,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URI') or 'sqlite:///' + os.path.join(basedir, 'example.sqlite')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+    JWT_ACCESS_TOKEN_EXPIRES = 60 ** 3
     JWT_TOKEN_LOCATION = ['headers']
     CACHE_TYPE = 'redis'
     CACHE_REDIS_HOST = 'redis'
