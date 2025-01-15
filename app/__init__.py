@@ -1,7 +1,7 @@
 from flask import Flask
 
 from config import Config
-from .extensions import db, jwt
+from .extensions import db, jwt, cache
 from .models import User, Strategy, Condition
 
 
@@ -11,6 +11,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     jwt.init_app(app)
+    cache.init_app(app)
 
     with app.app_context():
         db.create_all()

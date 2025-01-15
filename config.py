@@ -13,3 +13,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
     JWT_TOKEN_LOCATION = ['headers']
+    CACHE_TYPE = 'redis'
+    CACHE_REDIS_HOST = 'redis'
+    CACHE_REDIS_PORT = 6379
+    CACHE_REDIS_DB = 0
