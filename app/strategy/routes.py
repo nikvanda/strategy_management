@@ -46,7 +46,7 @@ class StrategyListView(MethodView):
             strategy = self.model(user_id=user_id, **data)
             save(strategy)
             update_strategy(strategy, {'sell_conditions': sell_conditions, 'buy_conditions': buy_conditions})
-        except sqlalchemy.exc.DataError:
+        except (sqlalchemy.exc.DataError, TypeError):
             return jsonify({'error': 'Invalid data'}), 400
 
         if strategy.id:
@@ -80,7 +80,7 @@ class StrategyDetailView(StrategyListView):
         data = request.get_json()
         try:
             update_strategy(st, data)
-        except sqlalchemy.exc.DataError:
+        except (sqlalchemy.exc.DataError, TypeError):
             return jsonify({'error': 'Invalid data'}), 400
         save(st)
 
@@ -96,7 +96,7 @@ class StrategyDetailView(StrategyListView):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
         if st is None:
-            return jsonify({'error': 'No such a strategy'}), 400
+            return jsonify({'error': 'No such a strategy.'}), 400
 
         delete(st)
         cache.delete('strategies')
@@ -113,8 +113,18 @@ def simulate(pk: int):
 
     data = request.get_json()
     df = pd.DataFrame(data)
-    df['date'] = pd.to_datetime(df['date'])
-    df['momentum'] = df['close'] - df['close'].shift(1)
-    result = utils.simulate_strategy(df, st)
+    try:
+        df['date'] = pd.to_datetime(df['date'])
+    except TypeError:
+        return jsonify({'error': 'Some of your provided data does not have date.'}), 400
+    try:
+        df['momentum'] = df['close'] - df['close'].shift(1)
+    except TypeError:
+        return jsonify({'error': 'Impossible to calculate momentum. Check provided data.'}), 400
+
+    try:
+        result = utils.simulate_strategy(df, st)
+    except TypeError:
+        return jsonify({'error': 'Some data is in incorrect format.'}), 400
 
     return jsonify(result), 200
