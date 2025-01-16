@@ -16,7 +16,7 @@ class StrategyListView(MethodView):
     methods = ['GET', 'POST']
     model = Strategy
 
-    @cache.cached(timeout=60 ** 2, key_prefix='strategies')
+    @cache.cached(timeout=60 ** 2, key_prefix=lambda: f'strategies_{get_jwt_identity()}')
     def get(self):
         user_id = get_jwt_identity()
         related_strategies = get_user_strategies(user_id)
@@ -35,12 +35,12 @@ class StrategyListView(MethodView):
         try:
             sell_conditions = data.pop('sell_conditions')
         except KeyError:
-            sell_conditions = None
+            sell_conditions = {}
 
         try:
             buy_conditions = data.pop('buy_conditions')
         except KeyError:
-            buy_conditions = None
+            buy_conditions = {}
 
         try:
             strategy = self.model(user_id=user_id, **data)
@@ -50,12 +50,12 @@ class StrategyListView(MethodView):
             return jsonify({'error': 'Invalid data'}), 400
 
         if strategy.id:
-            cache.delete('strategies')
+            cache.delete(f'strategies_{user_id}')
             user = get_by_pk(user_id, User)
             channel.basic_publish(exchange='',
                                   routing_key='strategy_changed',
                                   body=f'User {user.username} created {strategy.name}.')
-            return jsonify({'name': strategy.name, 'asset_type': strategy.asset_type}), 201
+            return jsonify({'name': strategy.name, 'asset_type': strategy.asset_type, 'id': strategy.id}), 201
         return jsonify({'error': 'Strategy creation failed'}), 400
 
 
@@ -66,7 +66,7 @@ class StrategyDetailView(StrategyListView):
         user_id = get_jwt_identity()
         st = get_user_strategy(user_id, pk)
         if st is None:
-            return jsonify({'error': 'No such a strategy'}), 400
+            return jsonify({'error': 'No such a strategy'}), 404
 
         response = st.to_dict()
         return jsonify(response), 200
@@ -78,6 +78,9 @@ class StrategyDetailView(StrategyListView):
             return jsonify({'error': 'No such a strategy'}), 400
 
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided for update'}), 400
+
         try:
             update_strategy(st, data)
         except (sqlalchemy.exc.DataError, TypeError):
@@ -86,7 +89,7 @@ class StrategyDetailView(StrategyListView):
 
         response = st.to_dict()
         user = get_by_pk(user_id, User)
-        cache.delete('strategies')
+        cache.delete(f'strategies_{user_id}')
         channel.basic_publish(exchange='',
                               routing_key='strategy_changed',
                               body=f'User {user.username} updated strategy {st.name}.')
@@ -99,7 +102,7 @@ class StrategyDetailView(StrategyListView):
             return jsonify({'error': 'No such a strategy.'}), 400
 
         delete(st)
-        cache.delete('strategies')
+        cache.delete(f'strategies_{user_id}')
         return jsonify({'message': 'Successfully delete an object'}), 204
 
 
@@ -112,6 +115,9 @@ def simulate(pk: int):
         return jsonify({'error': 'No such a strategy'}), 400
 
     data = request.get_json()
+    if not data or not isinstance(data, list):
+        return jsonify({'error': 'Invalid or empty data provided'}), 400
+
     df = pd.DataFrame(data)
     try:
         df['date'] = pd.to_datetime(df['date'])
@@ -126,5 +132,8 @@ def simulate(pk: int):
         result = utils.simulate_strategy(df, st)
     except TypeError:
         return jsonify({'error': 'Some data is in incorrect format.'}), 400
+    except IndexError:
+        return jsonify(
+            {'error': 'To simulate your strategy you must provide buy and sell conditions of the same type'}), 400
 
     return jsonify(result), 200
